@@ -36,6 +36,9 @@ BT-01 does not affect it.
 | BT-11 | Info | Accepted | The asset code is given at construction |
 | BT-12 | Info | Accepted | An expense paid outside the ledger is attested by two members, not proven |
 | BT-13 | Info | Open | The upgrade path is not exercised by unit tests |
+| BT-14 | Info | Documented | One member can veto any proposal they could decide |
+| BT-15 | Medium | Fixed | The declared testnet instance ran v0.3, and the v0.4 instance was not recorded |
+| BT-16 | Low | In progress | Builds were not verifiable by explorers (SEP-55) |
 
 ## Details
 
@@ -142,6 +145,26 @@ external evidence for auditors. This is the scope of the standard.
 
 Tests cover who may propose and approve an upgrade, not the code swap itself, which needs a
 second WASM. It will be exercised on testnet before mainnet.
+
+### BT-14: One member can veto any proposal they could decide
+
+An approver can reject any budget, expense or payment, and an admin any proposal. Spending needs
+two people to agree and stopping it needs one. Documented in the contract README as intended.
+
+### BT-15: Declared deployment did not match the code
+
+`deployments/testnet.json` pointed at the v0.3 instance (SDK 23, with BT-01 to BT-04), while the
+only instance built from the current code had been deployed by the platform and not recorded.
+The v0.4 instance is now the recorded one, its WASM hash matches a build of `6a5acb6`, and v0.3 is
+retired. The July 2026 instances of the legacy contracts, which predate this repository and accept
+`initialize` and writes from any account, are listed as retired.
+
+### BT-16: Builds were not verifiable by explorers
+
+Reproducibility was checked by hand (v0.3 rebuilt byte for byte from `ca2e196`). The release
+workflow now builds, attests (SEP-55) and publishes the WASM on each version tag; instances
+deployed from a release asset verify on explorers. The current demo instance was deployed from a
+local build and does not verify; it will be replaced by one deployed from the first release.
 
 ## Verification
 

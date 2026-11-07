@@ -49,11 +49,26 @@ proposed and again when approved.
 
 Error codes are part of the interface and are never renumbered.
 
+### Vetoes
+
+Any member who may decide a proposal may also reject it. One approver can therefore stop any
+budget, expense or payment, and one admin can stop any membership or code change. This is
+intended: spending needs two people to agree, and stopping it needs only one. A rejected proposal
+can be proposed again; every rejection is public as `proposal_rejected`.
+
 ## Known limitations (planned before mainnet)
 
 Membership and code changes need one admin approver besides the proposer, not several; there is
 no proposal expiry and no pause yet. See the
 [internal review](../../audits/2026-11-07-budget-treasury-internal-review.md) (BT-07 to BT-09).
+
+## Verified builds
+
+Releases are built and attested by GitHub (`.github/workflows/release.yml`, SEP-55): the WASM
+carries `source_repo` in its meta, and explorers such as Stellar Lab and Stellar Expert match the
+deployed hash with the attestation and the commit it was built from. Deploy only the WASM attached
+to a release (`scripts/deploy.sh --wasm <file> --release <tag>`); a local build has a different
+hash and does not verify.
 
 ## Build, test and deploy
 

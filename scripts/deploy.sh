@@ -7,7 +7,7 @@
 #     --source <cli-identity> \
 #     --admin <G...> --admin <G...> [--admin <G...>] \
 #     --token <C...> --symbol <ASSET_CODE> \
-#     [--name <manifest-key>]
+#     [--name <manifest-key>] [--wasm <release.wasm> --release <tag>]
 #
 # * <cli-identity> is a key in the Stellar CLI keystore of the person
 #   deploying. Keys are never read from this repository.
@@ -17,12 +17,15 @@
 #   --symbol its code, which payment budget lines must use.
 # * Mainnet needs CONFIRM_MAINNET=yes in the environment.
 # * The working tree must be clean, so the manifest points at the exact source.
+# * --wasm deploys a WASM built and attested by .github/workflows/release.yml
+#   (SEP-55), so explorers can verify it. Without it, the script builds locally
+#   and the instance is recorded as not build-verified.
 #
 # An existing entry under the same name is moved to "retired".
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-usage() { sed -n '2,22p' "$0" >&2; }
+usage() { sed -n '2,24p' "$0" >&2; }
 
 network="${1:-}"
 shift || true
@@ -31,7 +34,7 @@ case "$network" in
   *) usage; exit 1 ;;
 esac
 
-source_id="" token="" symbol="" name="budget-treasury"
+source_id="" token="" symbol="" name="budget-treasury" wasm="" release=""
 admins=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -40,6 +43,8 @@ while [ $# -gt 0 ]; do
     --token) token="$2"; shift 2 ;;
     --symbol) symbol="$2"; shift 2 ;;
     --name) name="$2"; shift 2 ;;
+    --wasm) wasm="$2"; shift 2 ;;
+    --release) release="$2"; shift 2 ;;
     *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
   esac
 done
@@ -57,8 +62,21 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-./scripts/build.sh
-wasm=target/wasm32v1-none/release/budget_treasury.wasm
+if [ -n "$wasm" ]; then
+  if [ -z "$release" ]; then
+    echo "--wasm needs --release <tag>: the release that attested it." >&2
+    exit 1
+  fi
+  if ! stellar contract info meta --wasm "$wasm" 2>/dev/null | grep -q "source_repo: github:"; then
+    echo "The WASM has no source_repo meta: it was not built by the release workflow." >&2
+    exit 1
+  fi
+  verified=true
+else
+  ./scripts/build.sh
+  wasm=target/wasm32v1-none/release/budget_treasury.wasm
+  verified=false
+fi
 schema=$(stellar contract info meta --wasm "$wasm" 2>/dev/null | sed -n 's/.*event_schema: //p')
 if [ -z "$schema" ]; then
   echo "The WASM does not declare event_schema in its contract meta." >&2
@@ -87,6 +105,8 @@ entry = {
     "token": "$token",
     "token_symbol": "$symbol",
     "event_schema": "$schema",
+    "build_verified": "$verified" == "true",
+    "release": "$release" or None,
 }
 old = manifest["contracts"].get(name)
 if old and old.get("contract_id"):
