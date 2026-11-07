@@ -17,7 +17,8 @@ env:
   CARGO_TERM_COLOR: always
   # Keep in sync with rust-toolchain.toml.
   RUST_TOOLCHAIN: 1.96.0
-  STELLAR_CLI_VERSION: 23.0.0
+  # Keep in sync with the CLI used for deployments (see deployments/).
+  STELLAR_CLI_VERSION: 27.0.0
 
 jobs:
   lint:
@@ -67,6 +68,15 @@ jobs:
       - run: stellar --version
       - name: Build
         run: ./scripts/build.sh | tee wasm-sizes.txt
+      - name: Check the Proof of Spend declaration
+        run: |
+          stellar contract info meta --wasm target/wasm32v1-none/release/budget_treasury.wasm \
+            | grep -F 'event_schema: proof-of-spend/1'
+      - name: Check that the TypeScript bindings are up to date
+        run: |
+          ./scripts/generate-bindings.sh
+          git diff --exit-code -- bindings/ \
+            || { echo 'Run scripts/generate-bindings.sh and commit the result.'; exit 1; }
       - name: Report WASM sizes
         run: |
           {
