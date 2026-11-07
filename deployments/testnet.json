@@ -23,6 +23,28 @@
       "deployed_at": null
     },
     "budget-treasury": {
+      "contract_id": "CDFQVSBZMUUIFWOYJVDJGEKHUAQWOTC6NTDHAQ4CZPRFV2USNIBHC6WO",
+      "wasm_hash": "fdff3fe2f8d3813be55a612777a30a69b4850f219b8a7cb81dd3b30d48325614",
+      "source_commit": "dd668d8",
+      "deployed_at": "2026-11-07",
+      "deployer": "GCQIHI6PNPAB4VW2O5QLPHEFMRFU3C5FFERY5V5W3HENHBKDJ67BS6YZ",
+      "token": "native XLM (CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC)",
+      "event_schema": "truway-budget-execution/1",
+      "purpose": "Smoke test of v0.2 with demo identities. The deployer is not a member.",
+      "evidence": {
+        "funded_by_two_sources": [
+          "https://stellar.expert/explorer/testnet/tx/844a565c45f91dcb22738e12957533b0449e26734333a85ad03ed9acb5fbcc42",
+          "https://stellar.expert/explorer/testnet/tx/2a8f368d8bc9bb018c810d9098d6b529ed11459b4c04189eedc3026210f16616"
+        ],
+        "budget_approved_by_second_member": "https://stellar.expert/explorer/testnet/tx/202ff1b50284b5c2fba8eb9b2b1c3fdc3311467a9408fcb3958b8e1727449655",
+        "payment_executed": "https://stellar.expert/explorer/testnet/tx/7e58870fdb1fd8416e8b08a2904f345cbafbf8e7892c5bd0a6828d769b4618a4",
+        "source_without_funds_rejected": "simulation error Error(Contract, #6)",
+        "receipt_reuse_rejected": "simulation error Error(Contract, #13)"
+      }
+    }
+  },
+  "retired": {
+    "budget-treasury-v0.1-smoke": {
       "contract_id": "CBDFVBP3RSISBPDU25CE7EX4BBD5ILE5MYB3V4OVW6KLIBJZOFCZKWR2",
       "wasm_hash": "6068ed6b6e3dfb8554050f4f113bc1e5c596054ccbb0f5aec05b06aeb0399ab6",
       "source_commit": "ba0892f",
@@ -35,7 +57,8 @@
         "payment_executed": "https://stellar.expert/explorer/testnet/tx/436bb7eb7a2c4b3f20bab363ce408e0d1a0186debb252cb9f66a5b94607f301d",
         "self_approval_rejected": "simulation error Error(Contract, #2)",
         "over_budget_rejected": "simulation error Error(Contract, #5)"
-      }
+      },
+      "superseded_by": "CDFQVSBZMUUIFWOYJVDJGEKHUAQWOTC6NTDHAQ4CZPRFV2USNIBHC6WO"
     }
   }
 }
