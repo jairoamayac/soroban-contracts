@@ -31,6 +31,6 @@ pub use events::{
 };
 pub use storage::DataKey;
 pub use types::{
-    Action, BudgetChange, BudgetLine, Error, LineKey, MemberChange, Payment, Proposal,
+    Action, BudgetChange, BudgetLine, Error, FundKey, LineKey, MemberChange, Payment, Proposal,
     ProposalStatus, Role,
 };

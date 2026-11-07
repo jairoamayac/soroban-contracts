@@ -1,7 +1,7 @@
 use soroban_sdk::{contracttype, Address, BytesN, Env, Map};
 use truway_common::ttl;
 
-use crate::types::{BudgetLine, LineKey, Proposal, Role};
+use crate::types::{BudgetLine, FundKey, LineKey, Proposal, Role};
 
 /// Storage keys. Variant names are part of the on-ledger encoding: never
 /// rename or remove one used by a deployed instance without a migration.
@@ -12,7 +12,8 @@ pub enum DataKey {
     NextId,
     Proposal(u64),
     Line(LineKey),
-    Funds(BytesN<32>),
+    Funds(FundKey),
+    Receipt(BytesN<32>),
 }
 
 pub(crate) fn token(env: &Env) -> Address {
@@ -60,15 +61,28 @@ pub(crate) fn set_line(env: &Env, key: &LineKey, line: &BudgetLine) {
     ttl::extend_persistent(env, &k);
 }
 
-pub(crate) fn funds(env: &Env, project: &BytesN<32>) -> i128 {
+pub(crate) fn funds(env: &Env, key: &FundKey) -> i128 {
     env.storage()
         .persistent()
-        .get(&DataKey::Funds(project.clone()))
+        .get(&DataKey::Funds(key.clone()))
         .unwrap_or(0)
 }
 
-pub(crate) fn set_funds(env: &Env, project: &BytesN<32>, amount: i128) {
-    let k = DataKey::Funds(project.clone());
+pub(crate) fn set_funds(env: &Env, key: &FundKey, amount: i128) {
+    let k = DataKey::Funds(key.clone());
     env.storage().persistent().set(&k, &amount);
+    ttl::extend_persistent(env, &k);
+}
+
+/// Proposal id of the executed payment a supporting document backs, if any.
+pub(crate) fn receipt_use(env: &Env, hash: &BytesN<32>) -> Option<u64> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Receipt(hash.clone()))
+}
+
+pub(crate) fn set_receipt_use(env: &Env, hash: &BytesN<32>, proposal_id: u64) {
+    let k = DataKey::Receipt(hash.clone());
+    env.storage().persistent().set(&k, &proposal_id);
     ttl::extend_persistent(env, &k);
 }

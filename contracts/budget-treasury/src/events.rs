@@ -2,12 +2,14 @@ use soroban_sdk::{contractevent, Address, BytesN, Symbol};
 
 use crate::types::Role;
 
-/// Topics: `("project_funded", project)`.
+/// Topics: `("project_funded", project)`. `funds` is what is left of this
+/// source for this project after the deposit.
 #[contractevent]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ProjectFunded {
     #[topic]
     pub project: BytesN<32>,
+    pub source: BytesN<32>,
     pub from: Address,
     pub amount: i128,
     pub funds: i128,
@@ -55,6 +57,7 @@ pub struct PaymentExecuted {
     #[topic]
     pub project: BytesN<32>,
     pub line: BytesN<32>,
+    pub source: BytesN<32>,
     pub proposal_id: u64,
     pub to: Address,
     pub amount: i128,
@@ -66,6 +69,7 @@ pub struct PaymentExecuted {
     pub approver: Address,
     pub line_paid: i128,
     pub line_budget: i128,
+    pub source_funds: i128,
 }
 
 /// Topics: `("member_added", member)`.

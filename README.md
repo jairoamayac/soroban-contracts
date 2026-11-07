@@ -21,6 +21,14 @@ auditor or developer can check it without asking Truway.
 | `sbt-badge` | Non-transferable reputation badges for foundations | [README](contracts/sbt-badge/README.md) |
 | `budget-treasury` | An organisation's funds, paid only against approved budget lines with two signers and an accounting code | [README](contracts/budget-treasury/README.md) |
 
+## Open schema
+
+[Budget Execution Events](docs/budget-execution-events.md) (`truway-budget-execution/1`) is an open
+event schema for executing earmarked money on Stellar: funding by source, approved budget lines, and
+payments with their accounting code and proof of spend. `budget-treasury` is its reference
+implementation; any contract can implement it and anyone can rebuild a budget execution report from
+the ledger.
+
 ## How it fits together
 
 ```

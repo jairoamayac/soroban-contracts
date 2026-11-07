@@ -1,6 +1,6 @@
 use soroban_sdk::{
-    contract, contractimpl, panic_with_error, symbol_short, token, Address, BytesN, Env, Map,
-    Symbol, Vec,
+    contract, contractimpl, contractmeta, panic_with_error, symbol_short, token, Address, BytesN,
+    Env, Map, Symbol, Vec,
 };
 use truway_common::ttl;
 
@@ -9,10 +9,20 @@ use crate::events::{
     ProposalRejected,
 };
 use crate::storage;
-use crate::types::{Action, BudgetLine, Error, LineKey, Payment, Proposal, ProposalStatus, Role};
+use crate::types::{
+    Action, BudgetLine, Error, FundKey, LineKey, Payment, Proposal, ProposalStatus, Role,
+};
+
+// Advertises the open event schema this contract emits, so indexers, auditors
+// and government systems can recognise it without asking Truway.
+contractmeta!(key = "event_schema", val = "truway-budget-execution/1");
 
 #[contract]
 pub struct BudgetTreasury;
+
+fn is_pending_receipt(hash: &BytesN<32>) -> bool {
+    hash.to_array() == [0u8; 32]
+}
 
 fn role_of(env: &Env, who: &Address) -> Option<Role> {
     storage::members(env).get(who.clone())
@@ -26,7 +36,8 @@ fn require_admin(role: Role) -> Result<(), Error> {
     }
 }
 
-/// Checks a payment against its budget line and project funds. Runs when the
+/// Checks a payment against its budget line, the funds its source earmarked for
+/// the project, and earlier uses of its supporting document. Runs when the
 /// payment is proposed and again when it is approved, since other payments may
 /// have been executed in between.
 fn check_payment(env: &Env, p: &Payment) -> Result<BudgetLine, Error> {
@@ -48,8 +59,16 @@ fn check_payment(env: &Env, p: &Payment) -> Result<BudgetLine, Error> {
     if new_paid > line.budget {
         return Err(Error::BudgetExceeded);
     }
-    if storage::funds(env, &p.project) < p.amount {
+    let fund = FundKey {
+        project: p.project.clone(),
+        source: p.source.clone(),
+    };
+    if storage::funds(env, &fund) < p.amount {
         return Err(Error::InsufficientFunds);
+    }
+    if !is_pending_receipt(&p.receipt_hash) && storage::receipt_use(env, &p.receipt_hash).is_some()
+    {
+        return Err(Error::ReceiptAlreadyUsed);
     }
     Ok(line)
 }
@@ -87,9 +106,16 @@ impl BudgetTreasury {
         ttl::extend_instance(&env);
     }
 
-    /// Moves `amount` of the treasury asset from `from` into the treasury and
-    /// assigns it to `project`. Anyone may fund (e.g. the funder directly).
-    pub fn fund(env: Env, from: Address, project: BytesN<32>, amount: i128) -> Result<i128, Error> {
+    /// Moves `amount` of the treasury asset from `from` into the treasury,
+    /// earmarked for `project` by funding `source`. Anyone may fund (e.g. the
+    /// funder directly). Returns what this source now holds for the project.
+    pub fn fund(
+        env: Env,
+        from: Address,
+        project: BytesN<32>,
+        source: BytesN<32>,
+        amount: i128,
+    ) -> Result<i128, Error> {
         from.require_auth();
         if amount <= 0 {
             return Err(Error::InvalidAmount);
@@ -99,13 +125,18 @@ impl BudgetTreasury {
             env.current_contract_address(),
             &amount,
         );
-        let funds = storage::funds(&env, &project)
+        let key = FundKey {
+            project: project.clone(),
+            source: source.clone(),
+        };
+        let funds = storage::funds(&env, &key)
             .checked_add(amount)
             .ok_or(Error::InvalidAmount)?;
-        storage::set_funds(&env, &project, funds);
+        storage::set_funds(&env, &key, funds);
         ttl::extend_instance(&env);
         ProjectFunded {
             project,
+            source,
             from,
             amount,
             funds,
@@ -267,11 +298,19 @@ impl BudgetTreasury {
                     line: p.line.clone(),
                 };
                 storage::set_line(env, &key, &line);
-                let funds = storage::funds(env, &p.project) - p.amount;
-                storage::set_funds(env, &p.project, funds);
+                let fund = FundKey {
+                    project: p.project.clone(),
+                    source: p.source.clone(),
+                };
+                let source_funds = storage::funds(env, &fund) - p.amount;
+                storage::set_funds(env, &fund, source_funds);
+                if !is_pending_receipt(&p.receipt_hash) {
+                    storage::set_receipt_use(env, &p.receipt_hash, proposal.id);
+                }
                 PaymentExecuted {
                     project: p.project.clone(),
                     line: p.line.clone(),
+                    source: p.source.clone(),
                     proposal_id: proposal.id,
                     to: p.to.clone(),
                     amount: p.amount,
@@ -283,6 +322,7 @@ impl BudgetTreasury {
                     approver: approver.clone(),
                     line_paid: line.paid,
                     line_budget: line.budget,
+                    source_funds,
                 }
                 .publish(env);
             }
@@ -336,8 +376,13 @@ impl BudgetTreasury {
         storage::line(&env, &LineKey { project, line })
     }
 
-    pub fn funds(env: Env, project: BytesN<32>) -> i128 {
-        storage::funds(&env, &project)
+    pub fn funds(env: Env, project: BytesN<32>, source: BytesN<32>) -> i128 {
+        storage::funds(&env, &FundKey { project, source })
+    }
+
+    /// Proposal id of the executed payment a supporting document backs, if any.
+    pub fn receipt_use(env: Env, receipt_hash: BytesN<32>) -> Option<u64> {
+        storage::receipt_use(&env, &receipt_hash)
     }
 
     pub fn proposal(env: Env, id: u64) -> Option<Proposal> {

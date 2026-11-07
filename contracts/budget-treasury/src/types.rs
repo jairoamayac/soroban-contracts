@@ -34,6 +34,15 @@ pub struct LineKey {
     pub line: BytesN<32>,
 }
 
+/// Identifies the funds one funder earmarked for one project.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FundKey {
+    pub project: BytesN<32>,
+    /// SHA-256 of the funder (funding source) identifier.
+    pub source: BytesN<32>,
+}
+
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BudgetChange {
@@ -49,13 +58,16 @@ pub struct BudgetChange {
 pub struct Payment {
     pub project: BytesN<32>,
     pub line: BytesN<32>,
+    /// Funding source the payment is charged to.
+    pub source: BytesN<32>,
     pub to: Address,
     pub amount: i128,
     /// Must match the chart of the budget line.
     pub chart: Symbol,
     /// Account the payment books to; may be an auxiliary of the line's account.
     pub account: Symbol,
-    /// SHA-256 of the supporting document (invoice, receipt).
+    /// SHA-256 of the supporting document (invoice, receipt). All zeros means
+    /// "support pending": allowed, but never counted as used.
     pub receipt_hash: BytesN<32>,
     /// Off-chain reference (e.g. SHA-256 of the payment UUID).
     pub reference: BytesN<32>,
@@ -120,4 +132,6 @@ pub enum Error {
     /// able to approve, which would lock the treasury.
     QuorumLost = 11,
     NoAdmins = 12,
+    /// The supporting document already backs another executed payment.
+    ReceiptAlreadyUsed = 13,
 }
