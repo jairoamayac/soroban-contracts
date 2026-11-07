@@ -1,4 +1,4 @@
-use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, Symbol, Vec};
+use soroban_sdk::{contract, contractimpl, Address, BytesN, ContractExecutable, Env, Symbol, Vec};
 use truway_common::ttl;
 
 use crate::events::{BadgeMinted, BadgeRevoked};
@@ -122,6 +122,7 @@ impl SbtBadge {
     /// Replaces the contract code in place, keeping its ID and storage. Admin only.
     pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) {
         storage::require_admin(&env);
-        env.deployer().update_current_contract_wasm(new_wasm_hash);
+        env.deployer()
+            .update_current_contract(ContractExecutable::Wasm(new_wasm_hash));
     }
 }

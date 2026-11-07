@@ -4,7 +4,19 @@
 
 use crate::{BadgeStatus, SbtBadge, SbtBadgeClient};
 use soroban_sdk::testutils::{Address as _, Events as _, Ledger as _};
-use soroban_sdk::{symbol_short, vec, Address, Env, IntoVal, Symbol};
+use soroban_sdk::{symbol_short, vec, xdr, Address, Env, IntoVal, Symbol, Val, Vec};
+
+/// Topics of the last event emitted by the last invocation.
+fn last_topics(env: &Env) -> xdr::VecM<xdr::ScVal> {
+    let events = env.events().all();
+    let xdr::ContractEventBody::V0(body) = &events.events().last().expect("no event").body;
+    body.topics.clone()
+}
+
+/// Expected topics, in their XDR form.
+fn topics(t: Vec<Val>) -> xdr::VecM<xdr::ScVal> {
+    t.into()
+}
 
 fn setup() -> (Env, SbtBadgeClient<'static>, Address) {
     let env = Env::default();
@@ -54,11 +66,10 @@ fn test_mint_emits_event() {
     let bt = Symbol::new(&env, "kyb_verified");
     client.mint_badge(&org, &bt);
 
-    let (_, topics, _) = env.events().all().last().unwrap();
     let expected_topic = Symbol::new(&env, "badge_minted");
     assert_eq!(
-        topics,
-        vec![&env, expected_topic.into_val(&env), bt.into_val(&env)]
+        last_topics(&env),
+        topics(vec![&env, expected_topic.into_val(&env), bt.into_val(&env)])
     );
 }
 
@@ -145,7 +156,7 @@ fn test_revoke_emits_event() {
     // events().all() returns only events from the last invocation;
     // verify right after revoke that the event was emitted.
     client.revoke_badge(&id);
-    assert!(!env.events().all().is_empty());
+    assert!(!env.events().all().events().is_empty());
 }
 
 #[test]

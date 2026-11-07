@@ -1,6 +1,6 @@
 use soroban_sdk::{
     contract, contractimpl, contractmeta, panic_with_error, symbol_short, token, Address, BytesN,
-    Env, Map, Symbol, Vec,
+    ContractExecutable, Env, Map, Symbol, Vec,
 };
 use truway_common::ttl;
 
@@ -10,13 +10,18 @@ use crate::events::{
 };
 use crate::storage;
 use crate::types::{
-    Action, BudgetChange, BudgetLine, Error, Expense, FundKey, LineKey, Payment, Proposal,
-    ProposalStatus, Role,
+    Action, BudgetChange, BudgetLine, Error, Expense, FundKey, LineKey, MemberChange, Payment,
+    Proposal, ProposalStatus, Role,
 };
 
 // Declares the open standard this contract implements, so indexers, auditors
 // and government systems can recognise it without asking Truway.
 contractmeta!(key = "event_schema", val = "proof-of-spend/1");
+
+/// Members are kept in instance storage, which is loaded on every call, so
+/// their number is bounded. A treasury has a handful of signers; field teams
+/// that only propose expenses fit comfortably.
+pub const MAX_MEMBERS: u32 = 32;
 
 #[contract]
 pub struct BudgetTreasury;
@@ -136,12 +141,52 @@ fn keeps_quorum(members: &Map<Address, Role>) -> bool {
     admins >= 1 && deciders >= 2
 }
 
+/// Members after adding `m` (or changing its role), if the result is valid.
+fn members_with(env: &Env, m: &MemberChange) -> Result<Map<Address, Role>, Error> {
+    let mut members = storage::members(env);
+    members.set(m.member.clone(), m.role);
+    if members.len() > MAX_MEMBERS {
+        return Err(Error::TooManyMembers);
+    }
+    // Adding never breaks quorum, but changing an existing role can.
+    if !keeps_quorum(&members) {
+        return Err(Error::QuorumLost);
+    }
+    Ok(members)
+}
+
+/// Members after removing `member`, if the result is valid.
+fn members_without(env: &Env, member: &Address) -> Result<Map<Address, Role>, Error> {
+    let mut members = storage::members(env);
+    if members.remove(member.clone()).is_none() {
+        return Err(Error::NotFound);
+    }
+    if !keeps_quorum(&members) {
+        return Err(Error::QuorumLost);
+    }
+    Ok(members)
+}
+
+/// Checks that `action` can be executed against the current state.
+fn validate(env: &Env, action: &Action) -> Result<(), Error> {
+    match action {
+        Action::SetBudget(b) => check_budget(env, b),
+        Action::RecordExpense(x) => check_expense(env, x).map(|_| ()),
+        Action::Pay(p) => check_payment(env, p).map(|_| ()),
+        Action::AddMember(m) => members_with(env, m).map(|_| ()),
+        Action::RemoveMember(member) => members_without(env, member).map(|_| ()),
+        Action::Upgrade(_) => Ok(()),
+    }
+}
+
 #[contractimpl]
 impl BudgetTreasury {
     /// Creates the treasury for one organisation. `admins` are the
     /// organisation's own people; Truway, as deployer, is not a member.
     /// `token` is the asset held on the ledger and `token_symbol` its code
     /// (e.g. `USDC`), which payment budget lines must use.
+    /// At least two distinct admins are required, so that the first proposal
+    /// can be approved by someone other than its proposer.
     pub fn __constructor(env: Env, admins: Vec<Address>, token: Address, token_symbol: Symbol) {
         if admins.is_empty() {
             panic_with_error!(&env, Error::NoAdmins);
@@ -149,6 +194,12 @@ impl BudgetTreasury {
         let mut members = Map::new(&env);
         for a in admins.iter() {
             members.set(a, Role::Admin);
+        }
+        if members.len() > MAX_MEMBERS {
+            panic_with_error!(&env, Error::TooManyMembers);
+        }
+        if !keeps_quorum(&members) {
+            panic_with_error!(&env, Error::QuorumLost);
         }
         storage::set_members(&env, &members);
         storage::set_token(&env, &token, &token_symbol);
@@ -195,35 +246,20 @@ impl BudgetTreasury {
     }
 
     /// Opens a proposal. Admins may propose anything; operators may propose
-    /// expenses and payments; approvers may not propose.
+    /// expenses and payments; approvers may not propose. Every action is
+    /// validated here, so invalid proposals are never stored, and again when
+    /// it is approved, because state may have changed in between.
     pub fn propose(env: Env, proposer: Address, action: Action) -> Result<u64, Error> {
         proposer.require_auth();
         let role = role_of(&env, &proposer).ok_or(Error::Unauthorized)?;
-        match &action {
-            Action::RecordExpense(x) => {
-                if role == Role::Approver {
-                    return Err(Error::Unauthorized);
-                }
-                check_expense(&env, x)?;
-            }
-            Action::Pay(p) => {
-                if role == Role::Approver {
-                    return Err(Error::Unauthorized);
-                }
-                check_payment(&env, p)?;
-            }
-            Action::SetBudget(b) => {
-                if role != Role::Admin {
-                    return Err(Error::Unauthorized);
-                }
-                check_budget(&env, b)?;
-            }
-            Action::AddMember(_) | Action::RemoveMember(_) | Action::Upgrade(_) => {
-                if role != Role::Admin {
-                    return Err(Error::Unauthorized);
-                }
-            }
+        let allowed = match &action {
+            Action::RecordExpense(_) | Action::Pay(_) => role != Role::Approver,
+            _ => role == Role::Admin,
+        };
+        if !allowed {
+            return Err(Error::Unauthorized);
         }
+        validate(&env, &action)?;
         let id = storage::next_id(&env);
         let kind = kind_of(&action);
         let proposal = Proposal {
@@ -398,13 +434,7 @@ impl BudgetTreasury {
                 .publish(env);
             }
             Action::AddMember(m) => {
-                let mut members = storage::members(env);
-                members.set(m.member.clone(), m.role);
-                // Adding never breaks quorum, but changing an existing role can.
-                if !keeps_quorum(&members) {
-                    return Err(Error::QuorumLost);
-                }
-                storage::set_members(env, &members);
+                storage::set_members(env, &members_with(env, m)?);
                 MemberAdded {
                     member: m.member.clone(),
                     role: m.role,
@@ -412,15 +442,7 @@ impl BudgetTreasury {
                 .publish(env);
             }
             Action::RemoveMember(member) => {
-                let mut members = storage::members(env);
-                if !members.contains_key(member.clone()) {
-                    return Err(Error::NotFound);
-                }
-                members.remove(member.clone());
-                if !keeps_quorum(&members) {
-                    return Err(Error::QuorumLost);
-                }
-                storage::set_members(env, &members);
+                storage::set_members(env, &members_without(env, member)?);
                 MemberRemoved {
                     member: member.clone(),
                 }
@@ -434,7 +456,8 @@ impl BudgetTreasury {
                     approver: approver.clone(),
                 }
                 .publish(env);
-                env.deployer().update_current_contract_wasm(hash.clone());
+                env.deployer()
+                    .update_current_contract(ContractExecutable::Wasm(hash.clone()));
             }
         }
         Ok(())

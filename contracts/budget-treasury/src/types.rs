@@ -153,8 +153,9 @@ pub enum Error {
     LineNotFound = 8,
     BudgetBelowPaid = 9,
     ChartMismatch = 10,
-    /// The change would leave no admin, or fewer than two members able to
-    /// approve, which would lock the treasury.
+    /// The treasury would have no admin, or fewer than two members able to
+    /// approve, which would lock it. Also raised at construction with fewer
+    /// than two distinct admins.
     QuorumLost = 11,
     NoAdmins = 12,
     /// The supporting document already backs another executed expense or payment.
@@ -163,4 +164,7 @@ pub enum Error {
     ReceiptRequired = 14,
     /// The operation's currency does not match its budget line (or the treasury asset).
     CurrencyMismatch = 15,
+    /// Members live in instance storage, loaded on every call, so their
+    /// number is capped at `MAX_MEMBERS`.
+    TooManyMembers = 16,
 }

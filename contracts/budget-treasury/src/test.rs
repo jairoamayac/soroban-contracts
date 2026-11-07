@@ -1,12 +1,14 @@
 // Amounts are fixed point with 7 decimals: 1_000_0000000 is 1,000 units.
 #![allow(clippy::inconsistent_digit_grouping)]
 
+extern crate std;
+
 use crate::{
-    Action, BudgetChange, BudgetTreasury, BudgetTreasuryClient, Error, Expense, MemberChange,
-    Payment, ProposalStatus, Role,
+    Action, BudgetChange, BudgetTreasury, BudgetTreasuryClient, Error, Expense, ExpenseRecorded,
+    MemberChange, Payment, PaymentExecuted, ProposalExecuted, ProposalStatus, Role, MAX_MEMBERS,
 };
 use soroban_sdk::testutils::{Address as _, Events as _};
-use soroban_sdk::{symbol_short, token, vec, Address, BytesN, Env, Symbol};
+use soroban_sdk::{symbol_short, token, vec, xdr, Address, BytesN, Env, Event, Symbol};
 
 struct Ctx {
     env: Env,
@@ -287,7 +289,7 @@ fn recording_an_expense_moves_no_funds() {
         &expense(&c, funder_a(&c.env), 45_000_0000000, id(&c.env, 22)),
     );
     c.client.approve(&c.approver, &pid);
-    assert!(c.env.events().all().len() >= 2);
+    assert_eq!(c.env.events().all().events().len(), 2);
     assert_eq!(c.token.balance(&c.client.address), 0);
     assert_eq!(c.client.receipt_use(&id(&c.env, 22)), Some(pid));
 }
@@ -519,14 +521,38 @@ fn only_an_admin_approves_membership_and_code_changes() {
 #[test]
 fn quorum_cannot_be_lost_by_removal_or_role_change() {
     let c = setup();
-    // Two admins: removing or demoting one would leave nobody to approve.
-    let remove = c
-        .client
-        .propose(&c.coordinator, &Action::RemoveMember(c.approver.clone()));
+    // Two admins: removing or demoting one would leave nobody to approve,
+    // so the proposal is refused before it is stored.
     assert_eq!(
-        c.client.try_approve(&c.approver, &remove),
+        c.client
+            .try_propose(&c.coordinator, &Action::RemoveMember(c.approver.clone())),
         Err(Ok(Error::QuorumLost))
     );
+    let demote = Action::AddMember(MemberChange {
+        member: c.approver.clone(),
+        role: Role::Operator,
+    });
+    assert_eq!(
+        c.client.try_propose(&c.coordinator, &demote),
+        Err(Ok(Error::QuorumLost))
+    );
+    // With a third member able to approve, the change goes through.
+    let third = Address::generate(&c.env);
+    add(&c, &third, Role::Approver);
+    c.client
+        .approve(&c.approver, &c.client.propose(&c.coordinator, &demote));
+    assert_eq!(c.client.role(&c.approver), Some(Role::Operator));
+}
+
+#[test]
+fn quorum_is_checked_again_when_a_proposal_is_approved() {
+    let c = setup();
+    let third = Address::generate(&c.env);
+    add(&c, &third, Role::Approver);
+    // Each change is valid on its own, but not both together.
+    let remove = c
+        .client
+        .propose(&c.coordinator, &Action::RemoveMember(third.clone()));
     let demote = c.client.propose(
         &c.coordinator,
         &Action::AddMember(MemberChange {
@@ -534,22 +560,64 @@ fn quorum_cannot_be_lost_by_removal_or_role_change() {
             role: Role::Operator,
         }),
     );
+    c.client.approve(&c.approver, &remove);
     assert_eq!(
         c.client.try_approve(&c.approver, &demote),
         Err(Ok(Error::QuorumLost))
     );
-    // With a third member able to approve, the change goes through.
-    let third = Address::generate(&c.env);
-    add(&c, &third, Role::Approver);
-    let demote_again = c.client.propose(
-        &c.coordinator,
-        &Action::AddMember(MemberChange {
-            member: c.approver.clone(),
-            role: Role::Operator,
-        }),
+}
+
+#[test]
+fn removing_an_unknown_member_is_refused() {
+    let c = setup();
+    let stranger = Address::generate(&c.env);
+    assert_eq!(
+        c.client
+            .try_propose(&c.coordinator, &Action::RemoveMember(stranger)),
+        Err(Ok(Error::NotFound))
     );
-    c.client.approve(&c.approver, &demote_again);
-    assert_eq!(c.client.role(&c.approver), Some(Role::Operator));
+}
+
+#[test]
+fn membership_is_capped() {
+    let c = setup();
+    // Two admins from the constructor, then operators up to the cap.
+    for _ in 2..MAX_MEMBERS {
+        add(&c, &Address::generate(&c.env), Role::Operator);
+    }
+    assert_eq!(c.client.members().len(), MAX_MEMBERS);
+    assert_eq!(
+        c.client.try_propose(
+            &c.coordinator,
+            &Action::AddMember(MemberChange {
+                member: Address::generate(&c.env),
+                role: Role::Operator,
+            }),
+        ),
+        Err(Ok(Error::TooManyMembers))
+    );
+}
+
+fn deploy_with_admins(env: &Env, admins: soroban_sdk::Vec<Address>) {
+    let token = env
+        .register_stellar_asset_contract_v2(Address::generate(env))
+        .address();
+    env.register(BudgetTreasury, (admins, token, symbol_short!("USDC")));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #11)")]
+fn constructor_needs_two_admins() {
+    let env = Env::default();
+    deploy_with_admins(&env, vec![&env, Address::generate(&env)]);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #11)")]
+fn constructor_counts_distinct_admins() {
+    let env = Env::default();
+    let admin = Address::generate(&env);
+    deploy_with_admins(&env, vec![&env, admin.clone(), admin]);
 }
 
 #[test]
@@ -566,4 +634,239 @@ fn rejected_proposal_cannot_be_executed() {
         Err(Ok(Error::InvalidState))
     );
     assert_eq!(c.client.receipt_use(&id(&c.env, 43)), None);
+}
+
+// ---- Conformance with docs/proof-of-spend.md, section 5 ----
+
+/// Event name (first topic) and data field names of an emitted event.
+fn shape(event: &xdr::ContractEvent) -> (std::string::String, std::vec::Vec<std::string::String>) {
+    let xdr::ContractEventBody::V0(body) = &event.body;
+    let name = match &body.topics[0] {
+        xdr::ScVal::Symbol(s) => s.0.to_utf8_string_lossy(),
+        other => panic!("first topic is not a symbol: {other:?}"),
+    };
+    let fields = match &body.data {
+        xdr::ScVal::Map(Some(map)) => map
+            .iter()
+            .map(|e| match &e.key {
+                xdr::ScVal::Symbol(s) => s.0.to_utf8_string_lossy(),
+                other => panic!("data key is not a symbol: {other:?}"),
+            })
+            .collect(),
+        other => panic!("data is not a map: {other:?}"),
+    };
+    (name, fields)
+}
+
+/// Asserts the event has the name and data fields the standard lists.
+fn assert_shape(event: &xdr::ContractEvent, name: &str, fields: &[&str]) {
+    let (got_name, mut got) = shape(event);
+    let mut want: std::vec::Vec<std::string::String> = fields.iter().map(|f| (*f).into()).collect();
+    got.sort();
+    want.sort();
+    assert_eq!(got_name, name);
+    assert_eq!(got, want, "data fields of {name}");
+}
+
+#[test]
+fn events_follow_the_standard() {
+    let c = setup();
+    let addr = c.client.address.clone();
+
+    c.client.fund(
+        &c.funder,
+        &project(&c.env),
+        &funder_a(&c.env),
+        &1_500_0000000,
+    );
+    let events = c.env.events().all().filter_by_contract(&addr);
+    assert_shape(
+        &events.events()[0],
+        "project_funded",
+        &["source", "from", "amount", "funds"],
+    );
+
+    pass(
+        &c,
+        &budget(&c, funder_a(&c.env), symbol_short!("USDC"), 1_000_0000000),
+    );
+    let events = c.env.events().all().filter_by_contract(&addr);
+    assert_shape(
+        &events.events()[0],
+        "budget_set",
+        &[
+            "line",
+            "source",
+            "chart",
+            "account",
+            "currency",
+            "budget",
+            "proposal_id",
+            "proposer",
+            "approver",
+        ],
+    );
+    assert_shape(
+        &events.events()[1],
+        "proposal_executed",
+        &["kind", "proposer", "approver"],
+    );
+
+    // An expense paid outside the ledger: exact content, in this order.
+    let pid = c.client.propose(
+        &c.coordinator,
+        &expense(&c, funder_a(&c.env), 45_0000000, id(&c.env, 60)),
+    );
+    c.client.approve(&c.approver, &pid);
+    let events = c.env.events().all().filter_by_contract(&addr);
+    assert_eq!(
+        events,
+        [
+            ExpenseRecorded {
+                project: project(&c.env),
+                line: food(&c.env),
+                source: funder_a(&c.env),
+                proposal_id: pid,
+                amount: 45_0000000,
+                currency: symbol_short!("USDC"),
+                chart: symbol_short!("CO_PUC"),
+                account: Symbol::new(&c.env, "513595"),
+                receipt_hash: id(&c.env, 60),
+                payment_ref: id(&c.env, 50),
+                payee_ref: id(&c.env, 51),
+                proposer: c.coordinator.clone(),
+                approver: c.approver.clone(),
+                line_paid: 45_0000000,
+                line_budget: 1_000_0000000,
+            }
+            .to_xdr(&c.env, &addr),
+            ProposalExecuted {
+                id: pid,
+                kind: symbol_short!("expense"),
+                proposer: c.coordinator.clone(),
+                approver: c.approver.clone(),
+            }
+            .to_xdr(&c.env, &addr),
+        ]
+    );
+    assert_shape(
+        &events.events()[0],
+        "expense_recorded",
+        &[
+            "line",
+            "source",
+            "proposal_id",
+            "amount",
+            "currency",
+            "chart",
+            "account",
+            "receipt_hash",
+            "payment_ref",
+            "payee_ref",
+            "proposer",
+            "approver",
+            "line_paid",
+            "line_budget",
+        ],
+    );
+
+    // A payment on the ledger: exact content, in this order.
+    let pid = c.client.propose(
+        &c.coordinator,
+        &pay(&c, funder_a(&c.env), 300_0000000, id(&c.env, 61)),
+    );
+    c.client.approve(&c.approver, &pid);
+    let events = c.env.events().all().filter_by_contract(&addr);
+    assert_eq!(
+        events,
+        [
+            PaymentExecuted {
+                project: project(&c.env),
+                line: food(&c.env),
+                source: funder_a(&c.env),
+                proposal_id: pid,
+                to: c.supplier.clone(),
+                amount: 300_0000000,
+                currency: symbol_short!("USDC"),
+                chart: symbol_short!("CO_PUC"),
+                account: Symbol::new(&c.env, "513595"),
+                receipt_hash: id(&c.env, 61),
+                reference: id(&c.env, 10),
+                proposer: c.coordinator.clone(),
+                approver: c.approver.clone(),
+                line_paid: 345_0000000,
+                line_budget: 1_000_0000000,
+                source_funds: 1_200_0000000,
+            }
+            .to_xdr(&c.env, &addr),
+            ProposalExecuted {
+                id: pid,
+                kind: symbol_short!("pay"),
+                proposer: c.coordinator.clone(),
+                approver: c.approver.clone(),
+            }
+            .to_xdr(&c.env, &addr),
+        ]
+    );
+    assert_shape(
+        &events.events()[0],
+        "payment_executed",
+        &[
+            "line",
+            "source",
+            "proposal_id",
+            "to",
+            "amount",
+            "currency",
+            "chart",
+            "account",
+            "receipt_hash",
+            "reference",
+            "proposer",
+            "approver",
+            "line_paid",
+            "line_budget",
+            "source_funds",
+        ],
+    );
+}
+
+#[test]
+fn governance_events_follow_the_standard() {
+    let c = setup();
+    let addr = c.client.address.clone();
+    let member = Address::generate(&c.env);
+
+    let pid = c.client.propose(
+        &c.coordinator,
+        &Action::AddMember(MemberChange {
+            member: member.clone(),
+            role: Role::Approver,
+        }),
+    );
+    let events = c.env.events().all().filter_by_contract(&addr);
+    assert_shape(
+        &events.events()[0],
+        "proposal_created",
+        &["proposer", "kind"],
+    );
+    c.client.approve(&c.approver, &pid);
+    let events = c.env.events().all().filter_by_contract(&addr);
+    assert_shape(&events.events()[0], "member_added", &["role"]);
+
+    let pid = c
+        .client
+        .propose(&c.coordinator, &Action::RemoveMember(member));
+    c.client.approve(&c.approver, &pid);
+    let events = c.env.events().all().filter_by_contract(&addr);
+    let (name, fields) = shape(&events.events()[0]);
+    assert_eq!(name, "member_removed");
+    assert!(fields.is_empty());
+
+    let pid = c
+        .client
+        .propose(&c.coordinator, &Action::Upgrade(id(&c.env, 77)));
+    c.client.reject(&c.approver, &pid);
+    let events = c.env.events().all().filter_by_contract(&addr);
+    assert_shape(&events.events()[0], "proposal_rejected", &["rejected_by"]);
 }

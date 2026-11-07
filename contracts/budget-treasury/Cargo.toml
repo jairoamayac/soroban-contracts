@@ -1,7 +1,7 @@
 [package]
 name = "budget-treasury"
-description = "Holds an organisation's funds and pays them only against approved budget lines, with two distinct signers and an accounting code on every payment."
-version.workspace = true
+description = "Reference implementation of Proof of Spend: budget lines per funding source, and expenses and payments recorded against them with two signers, an accounting code and a supporting document."
+version = "0.4.0"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
