@@ -1,6 +1,7 @@
 //! # budget-treasury
 //!
-//! Budget execution as a contract. An organisation's funds sit in this
+//! Reference implementation of Proof of Spend (`proof-of-spend/1`), an open
+//! standard for budget execution on Stellar. Budget execution as a contract. An organisation's funds sit in this
 //! contract and leave it only as payments against an approved budget line:
 //!
 //! * every change (budget lines, members, payments, upgrades) is a proposal
@@ -26,11 +27,11 @@ mod test;
 
 pub use contract::{BudgetTreasury, BudgetTreasuryClient};
 pub use events::{
-    BudgetSet, MemberAdded, MemberRemoved, PaymentExecuted, ProjectFunded, ProposalCreated,
-    ProposalRejected,
+    BudgetSet, ContractUpgraded, ExpenseRecorded, MemberAdded, MemberRemoved, PaymentExecuted,
+    ProjectFunded, ProposalCreated, ProposalExecuted, ProposalRejected,
 };
 pub use storage::DataKey;
 pub use types::{
-    Action, BudgetChange, BudgetLine, Error, FundKey, LineKey, MemberChange, Payment, Proposal,
-    ProposalStatus, Role,
+    Action, BudgetChange, BudgetLine, Error, Expense, FundKey, LineKey, MemberChange, Payment,
+    Proposal, ProposalStatus, Role,
 };

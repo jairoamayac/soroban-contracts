@@ -19,15 +19,15 @@ auditor or developer can check it without asking Truway.
 | `fund-tracker` | The budget allocated to each project | [README](contracts/fund-tracker/README.md) |
 | `expense-anchor` | Approved expenses and donor reports, each with the SHA-256 hash of its receipt | [README](contracts/expense-anchor/README.md) |
 | `sbt-badge` | Non-transferable reputation badges for foundations | [README](contracts/sbt-badge/README.md) |
-| `budget-treasury` | An organisation's funds, paid only against approved budget lines with two signers and an accounting code | [README](contracts/budget-treasury/README.md) |
+| `budget-treasury` | Reference implementation of Proof of Spend: budget lines per funder, expenses and payments with two signers and proof of spend | [README](contracts/budget-treasury/README.md) |
 
-## Open schema
+## Proof of Spend
 
-[Budget Execution Events](docs/budget-execution-events.md) (`truway-budget-execution/1`) is an open
-event schema for executing earmarked money on Stellar: funding by source, approved budget lines, and
-payments with their accounting code and proof of spend. `budget-treasury` is its reference
-implementation; any contract can implement it and anyone can rebuild a budget execution report from
-the ledger.
+A payment on Stellar proves that money moved. [Proof of Spend](docs/proof-of-spend.md)
+(`proof-of-spend/1`) is an open standard that proves what it bought: budget lines per funder with an
+accounting code, and every expense or payment with its supporting document and two approvers.
+`budget-treasury` is its reference implementation; any contract can implement it and anyone can
+rebuild a budget execution report from the ledger.
 
 ## How it fits together
 

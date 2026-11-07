@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, BytesN, Env, Map};
+use soroban_sdk::{contracttype, Address, BytesN, Env, Map, Symbol};
 use truway_common::ttl;
 
 use crate::types::{BudgetLine, FundKey, LineKey, Proposal, Role};
@@ -8,6 +8,7 @@ use crate::types::{BudgetLine, FundKey, LineKey, Proposal, Role};
 #[contracttype]
 pub enum DataKey {
     Token,
+    TokenSymbol,
     Members,
     NextId,
     Proposal(u64),
@@ -20,8 +21,13 @@ pub(crate) fn token(env: &Env) -> Address {
     env.storage().instance().get(&DataKey::Token).unwrap()
 }
 
-pub(crate) fn set_token(env: &Env, token: &Address) {
+pub(crate) fn token_symbol(env: &Env) -> Symbol {
+    env.storage().instance().get(&DataKey::TokenSymbol).unwrap()
+}
+
+pub(crate) fn set_token(env: &Env, token: &Address, symbol: &Symbol) {
     env.storage().instance().set(&DataKey::Token, token);
+    env.storage().instance().set(&DataKey::TokenSymbol, symbol);
 }
 
 pub(crate) fn members(env: &Env) -> Map<Address, Role> {
@@ -74,7 +80,7 @@ pub(crate) fn set_funds(env: &Env, key: &FundKey, amount: i128) {
     ttl::extend_persistent(env, &k);
 }
 
-/// Proposal id of the executed payment a supporting document backs, if any.
+/// Proposal id of the executed expense or payment a supporting document backs.
 pub(crate) fn receipt_use(env: &Env, hash: &BytesN<32>) -> Option<u64> {
     env.storage()
         .persistent()
