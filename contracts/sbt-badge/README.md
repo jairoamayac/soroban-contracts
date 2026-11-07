@@ -1,5 +1,9 @@
 # sbt-badge
 
+> **Legacy.** Superseded by [`budget-treasury`](../budget-treasury) and
+> [ADR 0003](../../docs/adr/0003-members-sign-proof-of-spend.md). No new deployments. Kept until
+> the Truway platform no longer calls it.
+
 Non-transferable (soulbound) reputation badges for organizations. There is no `transfer`
 function by design. Revoked badges stay on the ledger with `status = Revoked`.
 

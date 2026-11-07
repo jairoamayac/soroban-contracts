@@ -1,6 +1,6 @@
 # 2. Records are attested by the platform
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0003](0003-members-sign-proof-of-spend.md)
 - **Date:** 2026-09-22
 - **Related:** audit finding A-01
 

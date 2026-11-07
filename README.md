@@ -3,69 +3,69 @@
 [![CI](https://github.com/truway-xyz/soroban-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/truway-xyz/soroban-contracts/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-The public record layer of [Truway](https://truway.xyz), a platform that helps social
-foundations prove how every donated dollar was spent, from the supplier's invoice to the
-donor's report. These Soroban contracts keep that record on Stellar, where any donor,
-auditor or developer can check it without asking Truway.
+Proof of Spend for [Truway](https://truway.xyz): an open standard for budget execution on
+Stellar, and the contract that implements it. Truway traces how funds are budgeted, distributed
+and spent down to the last mile; these contracts keep that record on Stellar, where any funder,
+auditor or public official can check it without asking Truway.
 
-> **Status: pre-release.** Nothing is deployed from this repository yet. Earlier testnet
-> instances are retired and must not be used. New deployments will be listed in
-> [`deployments/`](deployments/). Interfaces may change before `v1.0.0`.
-
-## Contracts
-
-| Contract | What it records | Reference |
-|---|---|---|
-| `fund-tracker` | The budget allocated to each project | [README](contracts/fund-tracker/README.md) |
-| `expense-anchor` | Approved expenses and donor reports, each with the SHA-256 hash of its receipt | [README](contracts/expense-anchor/README.md) |
-| `sbt-badge` | Non-transferable reputation badges for foundations | [README](contracts/sbt-badge/README.md) |
-| `budget-treasury` | Reference implementation of Proof of Spend: budget lines per funder, expenses and payments with two signers and proof of spend | [README](contracts/budget-treasury/README.md) |
+> **Status: pre-release, testnet only.** `budget-treasury` runs on testnet (see
+> [`deployments/testnet.json`](deployments/testnet.json)). Interfaces may change before `v1.0.0`.
 
 ## Proof of Spend
 
 A payment on Stellar proves that money moved. [Proof of Spend](docs/proof-of-spend.md)
-(`proof-of-spend/1`) is an open standard that proves what it bought: budget lines per funder with an
-accounting code, and every expense or payment with its supporting document and two approvers.
-`budget-treasury` is its reference implementation; any contract can implement it and anyone can
-rebuild a budget execution report from the ledger.
+(`proof-of-spend/1`) proves what it bought: against which budget line, from which funder, booked
+to which account, backed by which document and approved by whom. Any contract can implement it,
+and anyone can rebuild a budget execution report or a general ledger from the events alone.
+
+## Contracts
+
+| Contract | Status | What it does | Reference |
+|---|---|---|---|
+| `budget-treasury` | Active, testnet | Reference implementation of Proof of Spend: budget lines per funder, expenses and payments with two signers and a supporting document | [README](contracts/budget-treasury/README.md) |
+| `fund-tracker` | Legacy | Budget allocated to each project, attested by the platform | [README](contracts/fund-tracker/README.md) |
+| `expense-anchor` | Legacy | Expenses anchored by the platform with the hash of their receipt | [README](contracts/expense-anchor/README.md) |
+| `sbt-badge` | Legacy | Non-transferable reputation badges | [README](contracts/sbt-badge/README.md) |
+
+Legacy contracts follow the server-attested model of ADR 0002, superseded by
+[ADR 0003](docs/adr/0003-members-sign-proof-of-spend.md). They get no new deployments and will be
+removed once the platform no longer calls them.
 
 ## How it fits together
 
 ```
+Organisation members (admins, approvers, field operators)
+  │  each signs with their own key
+  ▼
 Truway platform (closed source)
-  │  signs every write with the contract admin key
-  ├── fund-tracker     allocate · get_allocation
-  ├── expense-anchor   anchor · get_expense
-  └── sbt-badge        mint_badge · revoke_badge · get_badges
-
-Donors, auditors, developers
-  └── read records and events directly from the network
+  │  builds transactions, stores documents; deploys but is never a member
+  ▼
+budget-treasury   propose · approve · reject · fund        (one instance per organisation)
+  │
+  └── Proof of Spend events ──► funders, auditors, oversight bodies, public explorer
 ```
 
-Records are **attested by Truway**: the signer of every write is the platform's admin key, and
-attribution to each foundation lives off-chain. The ledger proves that Truway recorded a fact
-at a given time and that it has not changed since. See
-[ADR 0002](docs/adr/0002-server-attested-records.md) and the [audit history](audits/).
+Every budget line, expense, payment, membership change and upgrade is proposed by one member and
+approved by a different one. Truway cannot move funds, approve or upgrade. Details in
+[`docs/architecture.md`](docs/architecture.md).
 
-Checking an expense needs no account: download the receipt, compute its SHA-256 hash and
-compare it with the `receipt_hash` returned by `get_expense`. The full verification format
-is specified in [`docs/verification-spec.md`](docs/verification-spec.md).
+Checking a record needs no account: hash the supporting document with SHA-256 and compare it with
+`receipt_hash` in the event. See [`docs/verification-spec.md`](docs/verification-spec.md).
 
 ## Repository layout
 
 ```
 .
-├── contracts/            One crate per contract (contract, storage, events, types, tests)
-│   ├── fund-tracker/
-│   ├── expense-anchor/
-│   └── sbt-badge/
+├── contracts/
+│   ├── budget-treasury/  Proof of Spend reference implementation
+│   └── fund-tracker/, expense-anchor/, sbt-badge/   legacy
 ├── packages/
-│   └── common/           truway-common: building blocks shared by every contract
+│   └── common/           truway-common: TTL policy shared by every contract
+├── docs/                 Proof of Spend, architecture, events, storage, verification, ADRs
 ├── deployments/          Contract IDs and WASM hashes per network
 ├── scripts/              Build, deploy and bindings scripts
-├── bindings/             Generated TypeScript clients
+├── bindings/             Generated TypeScript client
 ├── examples/             Read-only integration examples
-├── docs/                 Architecture, events, storage, verification spec, ADRs
 └── audits/               Security reviews and their status
 ```
 
@@ -75,7 +75,7 @@ Requirements:
 
 - Rust through [rustup](https://rustup.rs). The toolchain and the `wasm32v1-none` target are
   pinned in [`rust-toolchain.toml`](rust-toolchain.toml) and install on first use.
-- [Stellar CLI](https://developers.stellar.org/docs/tools/cli) 23 or later.
+- [Stellar CLI](https://developers.stellar.org/docs/tools/cli) 27 (pinned in CI).
 
 ```bash
 make test    # unit tests for every contract
@@ -95,18 +95,19 @@ to report one, and [`audits/`](audits/) for past reviews.
 
 ## Roadmap to mainnet
 
-- [x] Fixes from the internal review: one-time `initialize`, admin checks on writes, input
-  validation, events on every write, TTL extension, immutable expense records, `upgrade`
-- [ ] Testnet redeployment under Truway-controlled keys
-- [ ] Role separation: a cold multisig admin for upgrades and roles, a hot writer for records
-- [ ] Typed errors (`#[contracterror]`)
-- [ ] Asset-aware amounts: the asset code stored with every amount
-- [ ] Collision-free identifiers: full 16-byte UUIDs instead of truncated symbols
-- [ ] Generated TypeScript bindings and read-only examples
-- [ ] Verification spec
+- [x] `budget-treasury`: two signers on every change, budgets per funding source, single-use
+  supporting documents, typed errors, events that follow Proof of Spend
+- [x] Testnet deployment under Truway-controlled keys, with the deployer outside the treasury
+- [x] Internal review of `budget-treasury` ([report](audits/2026-11-07-budget-treasury-internal-review.md))
+- [x] Generated TypeScript client and deploy script
+- [ ] Per-person signing in the platform (no demo signers)
+- [ ] Approval by several admins and a timelock for membership and code changes; proposal
+  expiry; pause
+- [ ] Proof of Spend `v1.0` with public feedback, and a read-only reference indexer
+- [ ] Reproducible builds with source verification (SEP-55)
 - [ ] Independent security review
-- [ ] Reproducible builds with source verification
 - [ ] Mainnet deployment
+- [ ] Removal of the legacy contracts
 
 ## Use of AI
 
@@ -116,7 +117,7 @@ and tested by the team before merge. Commits written with substantial AI assista
 
 ## Maintainers
 
-[@EmanuXBe](https://github.com/EmanuXBe) · [@angel1901](https://github.com/angel1901) ·
+[@emanuelbenavile](https://github.com/emanuelbenavile) · [@angel1901](https://github.com/angel1901) ·
 [@jairoamayac](https://github.com/jairoamayac)
 
 ## License

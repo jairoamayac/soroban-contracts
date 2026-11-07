@@ -1,9 +1,11 @@
 # Examples
 
-Read-only examples that show how anyone can query the records without an account:
+Read-only examples that show how anyone can check the record without an account. Planned, using
+the client in [`../bindings`](../bindings):
 
-- read an allocation from `fund-tracker`;
-- read an anchored expense from `expense-anchor` and check a receipt against its hash;
-- list the badges of an organization from `sbt-badge`.
+- read a budget line and what was spent against it, per funding source;
+- list the `expense_recorded` and `payment_executed` events of a project;
+- check a supporting document against its `receipt_hash`.
 
-Coming after the testnet redeployment, using the generated bindings in [`../bindings`](../bindings).
+Until then, [`docs/verification-spec.md`](../docs/verification-spec.md) shows each step with the
+Stellar CLI and RPC.

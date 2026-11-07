@@ -17,13 +17,14 @@ person's approval.
 | `Operator` | Expenses and payments | Only to withdraw their own proposal |
 
 A proposal is never approved by the member who proposed it. Membership and code changes need an
-admin approver. Truway deploys the contract but is not a member.
+admin approver. Truway deploys the contract but is not a member. Every action is validated when
+proposed and again when approved.
 
 ## Interface
 
 | Function | What it does |
 |---|---|
-| `__constructor(admins, token, token_symbol)` | Creates the treasury with the organisation's admins and its asset |
+| `__constructor(admins, token, token_symbol)` | Creates the treasury with at least two distinct admins of the organisation and its asset |
 | `fund(from, project, source, amount)` | Moves funds in, earmarked for a project by a funding source |
 | `propose(proposer, action)` | `SetBudget`, `RecordExpense`, `Pay`, `AddMember`, `RemoveMember`, `Upgrade` |
 | `approve(approver, id)` | Approves and executes a proposal |
@@ -40,19 +41,28 @@ admin approver. Truway deploys the contract but is not a member.
 | A payment never exceeds the funds its source holds for the project | `InsufficientFunds` (6) |
 | A budget is never set below what was spent | `BudgetBelowPaid` (9) |
 | An expense or payment books to the chart of its line | `ChartMismatch` (10) |
-| The treasury keeps an admin and two members able to approve, also when a role changes | `QuorumLost` (11) |
+| The treasury keeps an admin and two members able to approve, from construction and when a role changes | `QuorumLost` (11) |
 | A supporting document backs only one expense or payment | `ReceiptAlreadyUsed` (13) |
 | Every expense and payment has a supporting document | `ReceiptRequired` (14) |
 | Payments use lines in the treasury asset | `CurrencyMismatch` (15) |
+| At most 32 members (`MAX_MEMBERS`) | `TooManyMembers` (16) |
 
 Error codes are part of the interface and are never renumbered.
 
 ## Known limitations (planned before mainnet)
 
-Membership and code changes need one admin approver, not all of them; there is no key recovery, no
-pause and no proposal expiry yet. See the threat model in the roadmap.
+Membership and code changes need one admin approver besides the proposer, not several; there is
+no proposal expiry and no pause yet. See the
+[internal review](../../audits/2026-11-07-budget-treasury-internal-review.md) (BT-07 to BT-09).
 
-## Tests
+## Build, test and deploy
 
-`cargo test -p budget-treasury` covers every rule above, the address that authorises each call,
-budgets per funder, expenses that move no funds, payments, roles and quorum.
+```bash
+cargo test -p budget-treasury     # every rule above, and event conformance with the standard
+./scripts/build.sh                # release WASM, protocol 29
+./scripts/generate-bindings.sh    # TypeScript client in bindings/typescript/budget-treasury
+./scripts/deploy.sh testnet --source <identity> --admin <G...> --admin <G...> \
+  --token <C...> --symbol USDC    # records the instance in deployments/testnet.json
+```
+
+Deployed instances are listed in [`deployments/`](../../deployments/).
