@@ -4,8 +4,38 @@
   "rpc_url": "https://soroban-testnet.stellar.org",
   "admin": null,
   "contracts": {
-    "fund-tracker": { "contract_id": null, "wasm_hash": null, "source_commit": null, "deployed_at": null },
-    "expense-anchor": { "contract_id": null, "wasm_hash": null, "source_commit": null, "deployed_at": null },
-    "sbt-badge": { "contract_id": null, "wasm_hash": null, "source_commit": null, "deployed_at": null }
+    "fund-tracker": {
+      "contract_id": null,
+      "wasm_hash": null,
+      "source_commit": null,
+      "deployed_at": null
+    },
+    "expense-anchor": {
+      "contract_id": null,
+      "wasm_hash": null,
+      "source_commit": null,
+      "deployed_at": null
+    },
+    "sbt-badge": {
+      "contract_id": null,
+      "wasm_hash": null,
+      "source_commit": null,
+      "deployed_at": null
+    },
+    "budget-treasury": {
+      "contract_id": "CBDFVBP3RSISBPDU25CE7EX4BBD5ILE5MYB3V4OVW6KLIBJZOFCZKWR2",
+      "wasm_hash": "6068ed6b6e3dfb8554050f4f113bc1e5c596054ccbb0f5aec05b06aeb0399ab6",
+      "source_commit": "ba0892f",
+      "deployed_at": "2026-11-07",
+      "deployer": "GCQIHI6PNPAB4VW2O5QLPHEFMRFU3C5FFERY5V5W3HENHBKDJ67BS6YZ",
+      "token": "native XLM (CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC)",
+      "purpose": "Smoke test with demo identities. The deployer is not a member of the treasury.",
+      "evidence": {
+        "budget_approved_by_second_member": "https://stellar.expert/explorer/testnet/tx/40a49e7b4e0d67bef4ddee10627452a921385f0735d8a8ef8c9da65591489de8",
+        "payment_executed": "https://stellar.expert/explorer/testnet/tx/436bb7eb7a2c4b3f20bab363ce408e0d1a0186debb252cb9f66a5b94607f301d",
+        "self_approval_rejected": "simulation error Error(Contract, #2)",
+        "over_budget_rejected": "simulation error Error(Contract, #5)"
+      }
+    }
   }
 }
