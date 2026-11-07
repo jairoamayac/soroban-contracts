@@ -1,0 +1,21 @@
+[package]
+name = "budget-treasury"
+description = "Holds an organisation's funds and pays them only against approved budget lines, with two distinct signers and an accounting code on every payment."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+truway-common = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }

@@ -19,6 +19,7 @@ auditor or developer can check it without asking Truway.
 | `fund-tracker` | The budget allocated to each project | [README](contracts/fund-tracker/README.md) |
 | `expense-anchor` | Approved expenses and donor reports, each with the SHA-256 hash of its receipt | [README](contracts/expense-anchor/README.md) |
 | `sbt-badge` | Non-transferable reputation badges for foundations | [README](contracts/sbt-badge/README.md) |
+| `budget-treasury` | An organisation's funds, paid only against approved budget lines with two signers and an accounting code | [README](contracts/budget-treasury/README.md) |
 
 ## How it fits together
 
