@@ -63,6 +63,17 @@ jobs:
           cp target/wasm32v1-none/release/budget_treasury.wasm \
             "dist/budget_treasury_${{ steps.name.outputs.tag }}.wasm"
           (cd dist && sha256sum ./*.wasm | tee SHA256SUMS)
+      - name: Ask explorers to verify the build
+        # Same call as stellar-expert/soroban-build-workflow: Stellar Expert accepts it
+        # only from GitHub Actions runners, then matches the WASM hash with this run.
+        run: |
+          hash=$(sha256sum dist/*.wasm | cut -d' ' -f1)
+          for net in public testnet; do
+            curl -s --max-time 15 -X POST "https://api.stellar.expert/explorer/$net/contract-validation/match" \
+              -H 'Content-Type: application/json' \
+              -d "{\"repository\":\"${{ github.server_url }}/${{ github.repository }}\",\"commitHash\":\"${{ github.sha }}\",\"jobId\":\"${{ github.job }}\",\"runId\":\"${{ github.run_id }}\",\"contractHash\":\"$hash\",\"packageName\":\"budget-treasury\"}" || true
+            echo
+          done
       - uses: actions/attest-build-provenance@v1
         with:
           subject-path: dist/*.wasm
