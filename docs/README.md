@@ -2,10 +2,12 @@
 
 | Document | Status | What it covers |
 |---|---|---|
-| [architecture.md](architecture.md) | Outline | Components, trust model and the life of a record |
-| [events.md](events.md) | Outline | Event reference for indexers |
-| [storage-and-ttl.md](storage-and-ttl.md) | Outline | Storage layout and the TTL policy |
-| [verification-spec.md](verification-spec.md) | Outline | How a public verification code resolves to its record |
+| [proof-of-spend.md](proof-of-spend.md) | Draft 2 | The open standard: identifiers, events, invariants, how to rebuild reports, chart registry |
+| [architecture.md](architecture.md) | Current | Components, trust model, life of an expense and of a payment, upgrades |
+| [events.md](events.md) | Current | Where each contract's events are specified |
+| [storage-and-ttl.md](storage-and-ttl.md) | Current | Storage layout of `budget-treasury` and the TTL policy |
+| [verification-spec.md](verification-spec.md) | Current | How anyone checks a record without an account |
 | [adr/](adr/) | Living | Architecture Decision Records |
 
 Per-contract interface references live next to the code, in each `contracts/<name>/README.md`.
+Security reviews are in [`../audits/`](../audits/).

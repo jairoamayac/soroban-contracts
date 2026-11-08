@@ -7,7 +7,7 @@ written, so we favor small, well-tested changes and clear reasoning over speed.
 
 1. Install Rust through [rustup](https://rustup.rs). The pinned toolchain, `wasm32v1-none`
    target, `rustfmt` and `clippy` install on first use from `rust-toolchain.toml`.
-2. Install the [Stellar CLI](https://developers.stellar.org/docs/tools/cli), version 23 or later.
+2. Install the [Stellar CLI](https://developers.stellar.org/docs/tools/cli), version 27 (the one CI pins).
 3. Check that everything works:
 
    ```bash

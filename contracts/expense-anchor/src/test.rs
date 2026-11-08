@@ -4,7 +4,19 @@
 
 use crate::{ExpenseAnchor, ExpenseAnchorClient};
 use soroban_sdk::testutils::{Address as _, Events as _, Ledger as _};
-use soroban_sdk::{symbol_short, vec, Address, Bytes, Env, IntoVal, Symbol};
+use soroban_sdk::{symbol_short, vec, xdr, Address, Bytes, Env, IntoVal, Symbol, Val, Vec};
+
+/// Topics of the last event emitted by the last invocation.
+fn last_topics(env: &Env) -> xdr::VecM<xdr::ScVal> {
+    let events = env.events().all();
+    let xdr::ContractEventBody::V0(body) = &events.events().last().expect("no event").body;
+    body.topics.clone()
+}
+
+/// Expected topics, in their XDR form.
+fn topics(t: Vec<Val>) -> xdr::VecM<xdr::ScVal> {
+    t.into()
+}
 
 fn make_hash(env: &Env, seed: u8) -> Bytes {
     Bytes::from_array(env, &[seed; 32])
@@ -144,7 +156,7 @@ fn test_re_anchor_same_data_is_noop() {
     let exp = client.get_expense(&expense_id).unwrap();
     assert_eq!(exp.anchored_at, 1_700_000_000);
     assert!(
-        env.events().all().is_empty(),
+        env.events().all().events().is_empty(),
         "a no-op must not emit an event"
     );
 }
@@ -182,15 +194,14 @@ fn test_anchor_emits_event() {
 
     client.anchor(&admin, &expense_id, &project_id, &300_0000000, &hash);
 
-    let (_, topics, _) = env.events().all().last().unwrap();
     let expected_topic = Symbol::new(&env, "expense_anchored");
     assert_eq!(
-        topics,
-        vec![
+        last_topics(&env),
+        topics(vec![
             &env,
             expected_topic.into_val(&env),
             project_id.into_val(&env)
-        ]
+        ])
     );
 }
 

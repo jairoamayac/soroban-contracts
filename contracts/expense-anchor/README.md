@@ -1,5 +1,9 @@
 # expense-anchor
 
+> **Legacy.** Superseded by [`budget-treasury`](../budget-treasury) and
+> [ADR 0003](../../docs/adr/0003-members-sign-proof-of-spend.md). No new deployments. Kept until
+> the Truway platform no longer calls it.
+
 Anchors approved expenses and donor reports as immutable records. Each record carries the
 SHA-256 hash of its receipt, so anyone holding the file can prove it has not been altered.
 

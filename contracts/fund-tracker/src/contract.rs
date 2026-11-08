@@ -1,4 +1,4 @@
-use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, Symbol};
+use soroban_sdk::{contract, contractimpl, Address, BytesN, ContractExecutable, Env, Symbol};
 use truway_common::ttl;
 
 use crate::events::FundAllocated;
@@ -56,6 +56,7 @@ impl FundTracker {
     /// Replaces the contract code in place, keeping its ID and storage. Admin only.
     pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) {
         storage::admin(&env).require_auth();
-        env.deployer().update_current_contract_wasm(new_wasm_hash);
+        env.deployer()
+            .update_current_contract(ContractExecutable::Wasm(new_wasm_hash));
     }
 }

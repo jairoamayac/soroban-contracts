@@ -4,8 +4,128 @@
   "rpc_url": "https://soroban-testnet.stellar.org",
   "admin": null,
   "contracts": {
-    "fund-tracker": { "contract_id": null, "wasm_hash": null, "source_commit": null, "deployed_at": null },
-    "expense-anchor": { "contract_id": null, "wasm_hash": null, "source_commit": null, "deployed_at": null },
-    "sbt-badge": { "contract_id": null, "wasm_hash": null, "source_commit": null, "deployed_at": null }
+    "fund-tracker": {
+      "contract_id": null,
+      "wasm_hash": null,
+      "source_commit": null,
+      "deployed_at": null
+    },
+    "expense-anchor": {
+      "contract_id": null,
+      "wasm_hash": null,
+      "source_commit": null,
+      "deployed_at": null
+    },
+    "sbt-badge": {
+      "contract_id": null,
+      "wasm_hash": null,
+      "source_commit": null,
+      "deployed_at": null
+    },
+    "budget-treasury": {
+      "contract_id": "CCDKD5G2OPQUCAWODXWR7JPZJWENNZMKQU5E3J6HSPIUY5ZFWC3QWWZN",
+      "wasm_hash": "183dd156444f4bd3a6073702e1eaf7df42ba4ec5720997429ab5cd793c6262ca",
+      "source_commit": "6a5acb6",
+      "version": "0.4.0",
+      "deployed_at": "2026-11-07",
+      "deployed_by": "truway-backend TreasuryService.setup (single-use deployer account, not a member)",
+      "admins": [
+        "GBGS46GSNUBTNWKZ5L6FDEBTJ4DSGMHA6J5PSS6N5ZDJ2OJTBKMFJ4MH",
+        "GBHMELMAOGSIFEWVU7LMBZXEYWSRVHW63GHWD526IIRHTLKIYCEVSQER"
+      ],
+      "token": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+      "token_symbol": "USDC",
+      "event_schema": "proof-of-spend/1",
+      "purpose": "Demo instance of a sample organisation (demo data). Members are demo signers held by the platform on testnet until per-person signing ships (ADR 0003, point 4).",
+      "build_verified": false,
+      "evidence": {
+        "team_allocation_proposed": "https://stellar.expert/explorer/testnet/tx/bb2f9d77ea3fb4047d9f4218d3a2544a435941d9d65e12de8db225cb838b826d",
+        "team_allocation_approved_by_second_member": "https://stellar.expert/explorer/testnet/tx/f982b51413834610b481bd73982a5cd82b0bfdf0d12be3a24e26d2189f7758c1",
+        "field_operator_added_by_two_admins": "https://stellar.expert/explorer/testnet/tx/4b7082fc3ca01ab4ac405a6c70bd225101898e0d94dc78d7ed61e3918547b81d",
+        "expense_proposed_by_field_operator": "https://stellar.expert/explorer/testnet/tx/a9c264a338569e8e731545035f31f98827b55089a621c96f6ee7b3c39eb43481",
+        "expense_recorded_by_second_member": "https://stellar.expert/explorer/testnet/tx/ce2e11245a3c05612a1e2aa4f28eefd1961e6e0464fe03da29d5bb07b8b66c06"
+      }
+    }
+  },
+  "retired": {
+    "budget-treasury-v0.3-demo": {
+      "contract_id": "CAZUXWWW6IH2C233RZQETGPBGYPZ2JKF2PNQCS4IFSQRQEOKDEKP3YJF",
+      "wasm_hash": "13dbb6f0193815628dc4424550d2e15a152d323ad629045e34416b8d8e13d28a",
+      "source_commit": "ca2e196",
+      "deployed_at": "2026-11-07",
+      "deployer": "GCQIHI6PNPAB4VW2O5QLPHEFMRFU3C5FFERY5V5W3HENHBKDJ67BS6YZ",
+      "token": "USDC testnet (CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA)",
+      "event_schema": "proof-of-spend/1",
+      "purpose": "Demo instance with demo identities (coordinator, approver, field operator). The deployer is not a member.",
+      "evidence": {
+        "operator_added": "https://stellar.expert/explorer/testnet/tx/e7113a92f2c1b59d848196c69f3e8482c42a474e7c93c16102fa9103331c94a3",
+        "team_allocation_approved": "https://stellar.expert/explorer/testnet/tx/c9ce1ace27e432e6424f0b561d4d05f3b7279229659308662ce42dc981ff4188",
+        "expense_proposed_by_operator": "https://stellar.expert/explorer/testnet/tx/7714d84ae92cc4d0237ee5edf88b80bc0258712928f1803b8ad914fc20aa19ef",
+        "expense_recorded_by_second_member": "https://stellar.expert/explorer/testnet/tx/e4f2e39446cadf121380e26220d3dcd2540eadb49b5607bb741093705d083c6a",
+        "operator_cannot_approve": "simulation error Error(Contract, #1)",
+        "receipt_reuse_rejected": "simulation error Error(Contract, #13)",
+        "over_budget_rejected": "simulation error Error(Contract, #5)"
+      },
+      "superseded_by": "CCDKD5G2OPQUCAWODXWR7JPZJWENNZMKQU5E3J6HSPIUY5ZFWC3QWWZN",
+      "note": "v0.3 (soroban-sdk 23). Has the issues fixed in v0.4 (audits/2026-11-07-budget-treasury-internal-review.md)."
+    },
+    "budget-treasury-v0.1-smoke": {
+      "contract_id": "CBDFVBP3RSISBPDU25CE7EX4BBD5ILE5MYB3V4OVW6KLIBJZOFCZKWR2",
+      "wasm_hash": "6068ed6b6e3dfb8554050f4f113bc1e5c596054ccbb0f5aec05b06aeb0399ab6",
+      "source_commit": "ba0892f",
+      "deployed_at": "2026-11-07",
+      "deployer": "GCQIHI6PNPAB4VW2O5QLPHEFMRFU3C5FFERY5V5W3HENHBKDJ67BS6YZ",
+      "token": "native XLM (CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC)",
+      "purpose": "Smoke test with demo identities. The deployer is not a member of the treasury.",
+      "evidence": {
+        "budget_approved_by_second_member": "https://stellar.expert/explorer/testnet/tx/40a49e7b4e0d67bef4ddee10627452a921385f0735d8a8ef8c9da65591489de8",
+        "payment_executed": "https://stellar.expert/explorer/testnet/tx/436bb7eb7a2c4b3f20bab363ce408e0d1a0186debb252cb9f66a5b94607f301d",
+        "self_approval_rejected": "simulation error Error(Contract, #2)",
+        "over_budget_rejected": "simulation error Error(Contract, #5)"
+      },
+      "superseded_by": "CDFQVSBZMUUIFWOYJVDJGEKHUAQWOTC6NTDHAQ4CZPRFV2USNIBHC6WO"
+    },
+    "budget-treasury-v0.2-smoke": {
+      "contract_id": "CDFQVSBZMUUIFWOYJVDJGEKHUAQWOTC6NTDHAQ4CZPRFV2USNIBHC6WO",
+      "wasm_hash": "fdff3fe2f8d3813be55a612777a30a69b4850f219b8a7cb81dd3b30d48325614",
+      "source_commit": "dd668d8",
+      "deployed_at": "2026-11-07",
+      "deployer": "GCQIHI6PNPAB4VW2O5QLPHEFMRFU3C5FFERY5V5W3HENHBKDJ67BS6YZ",
+      "token": "native XLM (CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC)",
+      "event_schema": "truway-budget-execution/1",
+      "purpose": "Smoke test of v0.2 with demo identities. The deployer is not a member.",
+      "evidence": {
+        "funded_by_two_sources": [
+          "https://stellar.expert/explorer/testnet/tx/844a565c45f91dcb22738e12957533b0449e26734333a85ad03ed9acb5fbcc42",
+          "https://stellar.expert/explorer/testnet/tx/2a8f368d8bc9bb018c810d9098d6b529ed11459b4c04189eedc3026210f16616"
+        ],
+        "budget_approved_by_second_member": "https://stellar.expert/explorer/testnet/tx/202ff1b50284b5c2fba8eb9b2b1c3fdc3311467a9408fcb3958b8e1727449655",
+        "payment_executed": "https://stellar.expert/explorer/testnet/tx/7e58870fdb1fd8416e8b08a2904f345cbafbf8e7892c5bd0a6828d769b4618a4",
+        "source_without_funds_rejected": "simulation error Error(Contract, #6)",
+        "receipt_reuse_rejected": "simulation error Error(Contract, #13)"
+      },
+      "superseded_by": "CAZUXWWW6IH2C233RZQETGPBGYPZ2JKF2PNQCS4IFSQRQEOKDEKP3YJF"
+    },
+    "fund-tracker-2026-07": {
+      "contract_id": "CC6OJ26655KKLDZB6HXBV2IN4WWU7GMU57IX7WQSF3SKAEJRMAPQVHYS",
+      "wasm_hash": "e2d972627fc5070bfcc6a447ab87919f10687df82c4293203c2d1c5849a3d62d",
+      "source_commit": null,
+      "deployed_at": "2026-07-04",
+      "note": "Deployed before this repository existed, from code prior to the 2026-09-22 fixes. Do not use. Accepts initialize and writes from any account (checked by simulation on 2026-11-07)."
+    },
+    "expense-anchor-2026-07": {
+      "contract_id": "CABW2KK4CRLHOB4GATGIT2MDGE3HLTDTI5YZOFOQHGLONQTNU3MYYOAW",
+      "wasm_hash": "9507405a2d7125eeaccc16332e1c354a2d74defd88ca3f13c9fbe358195cdede",
+      "source_commit": null,
+      "deployed_at": "2026-07-04",
+      "note": "Deployed before this repository existed, from code prior to the 2026-09-22 fixes. Do not use. Accepts initialize and writes from any account (checked by simulation on 2026-11-07)."
+    },
+    "sbt-badge-2026-07": {
+      "contract_id": "CCBTM23SCCOEA7Y55DL4ENJNWID7OATWB7RXHAS7MD6CQHW3PMG4CDNK",
+      "wasm_hash": "2a91bd5ac87dd5b888e681bf152c105eac8068a579ddd2cec397f4ecfa0f8377",
+      "source_commit": null,
+      "deployed_at": "2026-07-04",
+      "note": "Deployed before this repository existed, from code prior to the 2026-09-22 fixes. Do not use."
+    }
   }
 }

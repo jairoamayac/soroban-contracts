@@ -1,5 +1,9 @@
 # fund-tracker
 
+> **Legacy.** Superseded by [`budget-treasury`](../budget-treasury) and
+> [ADR 0003](../../docs/adr/0003-members-sign-proof-of-spend.md). No new deployments. Kept until
+> the Truway platform no longer calls it.
+
 Records the budget allocated to each project. Every allocation is an attested, timestamped
 entry written by the contract admin.
 
