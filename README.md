@@ -46,11 +46,52 @@ budget-treasury   propose · approve · reject · fund        (one instance per 
 ```
 
 Every budget line, expense, payment, membership change and upgrade is proposed by one member and
-approved by a different one. Truway cannot move funds, approve or upgrade. Details in
-[`docs/architecture.md`](docs/architecture.md).
+approved by a different one. By design Truway cannot move funds, approve or upgrade: it is never a
+member. Details in [`docs/architecture.md`](docs/architecture.md).
 
-Checking a record needs no account: hash the supporting document with SHA-256 and compare it with
-`receipt_hash` in the event. See [`docs/verification-spec.md`](docs/verification-spec.md).
+> **On testnet today**, while per-person signing is being built, the members of the demo instance
+> are demo signers whose keys the platform holds ([ADR 0003](docs/adr/0003-members-sign-proof-of-spend.md),
+> point 4). They are labelled as such in the app and are never used on mainnet.
+
+## Verify a record
+
+No account and no permission are needed. With the [Stellar CLI](https://developers.stellar.org/docs/tools/cli):
+
+```bash
+# 1. The contract claims to follow Proof of Spend
+stellar contract info meta --contract-id <CONTRACT_ID> --network testnet   # event_schema = proof-of-spend/1
+
+# 2. The supporting document is the one that was approved
+shasum -a 256 invoice.pdf                                                   # compare with receipt_hash in the event
+
+# 3. That document backs exactly one record
+stellar contract invoke --id <CONTRACT_ID> --network testnet -- receipt_use --receipt_hash <HASH>
+```
+
+The current instance is listed in [`deployments/testnet.json`](deployments/testnet.json). To find
+events, check the WASM against its source and read the approvals, follow
+[`docs/verification-spec.md`](docs/verification-spec.md).
+
+## Known limits
+
+Published on purpose, so nobody has to discover them in the code.
+
+- **A supporting document is single use within one treasury**, not across treasuries. Each
+  organisation has its own instance, so the same invoice could be filed in two organisations. A
+  shared registry is planned (see the roadmap).
+- **`receipt_hash` identifies the file, not the invoice.** Two photos of the same paper invoice
+  hash differently. The shared registry will also index electronic invoices by their tax
+  authority identifier (the CUFE in Colombia).
+- **An expense paid outside the ledger is attested, not proven.** `RecordExpense` proves that two
+  members approved it, against which budget line and with which document; not that the bank
+  transfer or cash payment happened. `payment_ref` links the external evidence for auditors.
+- **Binding an address to a real person happens off the ledger.**
+- **Governance is not final:** one admin approver besides the proposer can add members or
+  replace the code; there is no timelock, no proposal expiry and no pause yet. Readers see every
+  upgrade through `contract_upgraded`, emitted before the code changes.
+
+Findings and their status: [internal review of 2026-11-07](audits/2026-11-07-budget-treasury-internal-review.md).
+It is an internal review, not an independent audit.
 
 ## Repository layout
 
@@ -103,6 +144,8 @@ to report one, and [`audits/`](audits/) for past reviews.
 - [ ] Per-person signing in the platform (no demo signers)
 - [ ] Approval by several admins and a timelock for membership and code changes; proposal
   expiry; pause
+- [ ] Shared supporting-document registry across treasuries, indexing electronic invoices by
+  their tax authority identifier
 - [ ] Proof of Spend `v1.0` with public feedback, and a read-only reference indexer
 - [ ] Reproducible builds with source verification (SEP-55)
 - [ ] Independent security review
