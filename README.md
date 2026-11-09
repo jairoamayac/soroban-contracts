@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/truway-xyz/soroban-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/truway-xyz/soroban-contracts/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-truway.gitbook.io-1E42D8.svg)](https://truway.gitbook.io/docs)
 
 Proof of Spend for [Truway](https://truway.xyz): an open standard for budget execution on
 Stellar, and the contract that implements it. Truway traces how funds are budgeted, distributed
@@ -68,7 +69,9 @@ shasum -a 256 invoice.pdf                                                   # co
 stellar contract invoke --id <CONTRACT_ID> --network testnet -- receipt_use --receipt_hash <HASH>
 ```
 
-The current instance is listed in [`deployments/testnet.json`](deployments/testnet.json). To find
+The current instance is listed in [`deployments/testnet.json`](deployments/testnet.json). The
+[documentation site](https://truway.gitbook.io/docs/desarrolladores/arquitectura) has the
+architecture, signing and deployment diagrams. To find
 events, check the WASM against its source and read the approvals, follow
 [`docs/verification-spec.md`](docs/verification-spec.md).
 
