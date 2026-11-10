@@ -9,5 +9,8 @@
 | [verification-spec.md](verification-spec.md) | Current | How anyone checks a record without an account |
 | [adr/](adr/) | Living | Architecture Decision Records |
 
+Guides and diagrams in English and Spanish are on the
+[documentation site](https://truway.gitbook.io/docs).
+
 Per-contract interface references live next to the code, in each `contracts/<name>/README.md`.
 Security reviews are in [`../audits/`](../audits/).
